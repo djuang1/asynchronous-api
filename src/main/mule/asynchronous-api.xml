@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+    <http:listener-config name="asynchronous-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="asynchronous-api-config" api="asynchronous-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <configuration-properties doc:name="Configuration properties" doc:id="d077aab3-8674-4d46-8398-c8cdeae69c9f" file="mule-properties.yaml" />
+    <flow name="asynchronous-api-main">
+        <http:listener config-ref="asynchronous-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="asynchronous-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="asynchronous-api-console">
+        <http:listener config-ref="asynchronous-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="asynchronous-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="delete:\resources\(id):asynchronous-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <os:remove doc:name="Remove" doc:id="a8bbbb2f-a5d2-494d-86fa-d1d95b5ad321" key="#[vars.id]" />
+        <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "CANCELLED",
+  start: "01-01-2013 10:50:45",
+  end: "01-01-2014 10:50:45"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\resources:asynchronous-api-config">
+        <os:retrieve-all doc:name="Retrieve all" doc:id="5985bf96-6c8b-43c1-988c-de8497c324a8" />
+        <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  tasks: dw::core::Objects::entrySet(payload) filter (($.key as String) != "task") map { 
+  		id: $.key,
+		href: "/resources/" ++ $.key
+	}
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\resources\(id):asynchronous-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <os:retrieve doc:name="Retrieve" doc:id="59d05be6-2ea8-4559-a5c6-78774bc3f2d2" key="#[vars.id]">
+            <os:default-value><![CDATA[""]]></os:default-value>
+        </os:retrieve>
+        <logger level="INFO" doc:name="Logger" doc:id="6878fc08-8769-44cb-9f5d-64091181ec10" />
+		<choice doc:name="Choice" doc:id="1e927f9c-1e88-4355-b904-1dc94370f65d" >
+			<when expression='#[payload.status == "SUCCESS"]'>
+				<set-variable value="303" doc:name="Set HTTP Status" doc:id="3746352a-b5a5-4ff9-ba2c-ca7750fe5118" variableName="httpStatus" />
+		
+				<ee:transform doc:name="Transform Message" doc:id="185b1c7a-f192-467b-a488-ca2b30beada6" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "SUCCESS",
+  start: payload.start,
+  end: now()
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "IN PROGRESS",
+  start: payload.start,
+  end: ""
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="post:\resources:asynchronous-api-config">
+        <os:retrieve doc:name="Retrieve Job ID" doc:id="ac2dbe4d-2326-4516-8104-6b4bc8b5262e" key="task">
+            <os:default-value><![CDATA[${task.start_id}]]></os:default-value>
+        </os:retrieve>
+        <ee:transform doc:name="Transform Message" doc:id="c416b839-9534-40cc-963a-1a89c0839bb1">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="job"><![CDATA[%dw 2.0
+output application/json
+---
+{
+  id: payload,
+  status: "IN PROGRESS",
+  start: now(),
+  href: "/resources/" ++ (payload as String default "100")
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <os:store doc:name="Store Job Data" doc:id="34871790-29e3-4c8b-9b21-be274cd95b5d" key="#[vars.job.id]">
+            <os:value><![CDATA[#[vars.job]]]></os:value>
+        </os:store>
+        <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.job]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <set-variable value="#[output application/java --- (vars.outboundHeaders default {}) ++ {&quot;Location&quot;: vars.job.href}]" doc:name="Set Location" doc:id="1e60fa70-b954-46bd-8323-78dc6ced358c" variableName="outboundHeaders" />
+        <os:store doc:name="Increment Job ID" doc:id="363fb9d5-1720-48a0-8d74-d1a1dbf42b5a" key="task">
+            <os:value><![CDATA[#[(vars.job.id as Number) + 1]]]></os:value>
+        </os:store>
+    </flow>
+    <flow name="put:\tasks\(id):asynchronous-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <os:retrieve doc:name="Retrieve" doc:id="01fbd1bc-f77d-4cf8-a6d5-2d68c14ee7f1" key="#[vars.id]">
+			<os:default-value ><![CDATA[#[""]]]></os:default-value>
+		</os:retrieve>
+		<logger level="INFO" doc:name="Logger" doc:id="6a409f37-2d50-43c2-b422-c36c978b112b" />
+		<choice doc:name="Choice" doc:id="e3811dea-88f9-498d-a6d8-08f92e5d7a44" >
+			<when expression='#[payload == ""]'>
+				<ee:transform doc:name="Transform Message" doc:id="7f52b844-ddd0-4b69-9ebb-6a14561f07dd" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "DOES NOT EXIST"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<os:store doc:name="Store" doc:id="3886a35f-806d-4095-a1c7-bc50348b659e" key="#[vars.id]">
+			<os:value><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+  id: payload.id,
+  start: payload.start,
+  status: "SUCCESS",
+  href: payload.href
+}]]]></os:value>
+		</os:store>
+				<ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  status: "UPDATED"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+</mule>
