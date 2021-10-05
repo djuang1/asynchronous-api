@@ -98,3 +98,31 @@ types:
           application/json:
             example: {status: "UPDATED"}
 ```
+
+## Code Examples
+
+Below are areas in the code that I wanted to call out because it's not well documented.
+
+### Setting Outbound Headers - Location
+
+The HTTP 202 response indicates the location where subsequent requests will check on the status of the job. In order to set the outbound header in the HTTP response, you need to set a variable using the following [code](https://github.com/djuang1/asynchronous-api/blob/main/src/main/mule/asynchronous-api.xml#L235):
+
+````
+<set-variable value="#[output application/java --- (vars.outboundHeaders default {}) ++ {&quot;Location&quot;: vars.job.href}]" doc:name="Set Location" doc:id="1e60fa70-b954-46bd-8323-78dc6ced358c" variableName="outboundHeaders" />
+````
+
+### DataWeave - Map LinkedHashmap to Array
+
+Another problem I had to solve was how to map a LinkedHashmap of records from the ObjectStore to an array so I could map them in the JSON response. Below is the code that I used:
+
+````
+%dw 2.0
+output application/json
+---
+{
+  tasks: dw::core::Objects::entrySet(payload) filter (($.key as String) != "task") map { 
+  		id: $.key,
+		href: "/resources/" ++ $.key
+	}
+}
+````
